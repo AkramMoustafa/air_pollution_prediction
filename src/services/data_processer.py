@@ -5,6 +5,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from datetime import datetime, timedelta, timezone
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 import pandas as pd
 
@@ -63,11 +67,11 @@ BASE_URL = "https://api.openaq.org/v3"
 session = requests.Session()
 
 import os
-
-API_KEY = os.getenv("OPENAQ_API_KEY")
+API_KEY = "0cd0fb766d5e0b27831bc8858fa08c333e5c3db92a4afcd2be4801956f782768"
 
 HEADERS = {"X-API-Key": API_KEY}
-
+print(API_KEY)
+print(HEADERS)
 HORIZON_UNCERTAINTY_SCALE = 0.12
 import time
 import random
@@ -317,96 +321,7 @@ def paginate(endpoint, params, limit=1000, max_pages=50):
 
     print(f"[PAGINATE SUCCESS] Endpoint {endpoint} completed. Total records compiled: {len(out)}")
     return out
-# all_rows = []
 
-# lat_vals = []
-# lon_vals = []
-
-# for _, row in df.iterrows():
-
-#     # Try multiple possible column positions
-#     possible_pairs = [(18, 19), (20, 21)]
-
-#     lat, lon = None, None
-
-#     for lat_idx, lon_idx in possible_pairs:
-#         lat_candidate = pd.to_numeric(row[lat_idx], errors="coerce")
-#         lon_candidate = pd.to_numeric(row[lon_idx], errors="coerce")
-
-#         # Check if valid geographic range
-#         if (
-#             pd.notna(lat_candidate) and pd.notna(lon_candidate)
-#             and -90 <= lat_candidate <= 90
-#             and -180 <= lon_candidate <= 180
-#         ):
-#             lat, lon = lat_candidate, lon_candidate
-#             break
-
-#     if lat is None or lon is None:
-#         continue
-
-#     lat_vals.append(lat)
-#     lon_vals.append(lon)
-
-#     print("Latitude min:", min(lat_vals))
-#     print("Latitude max:", max(lat_vals))
-#     print("Longitude min:", min(lon_vals))
-#     print("Longitude max:", max(lon_vals))
-
-
-#     print(lat,lon)
-#     lat = pd.to_numeric(lat, errors="coerce")
-#     lon = pd.to_numeric(lon, errors="coerce")
-
-#     if pd.isna(lat) or pd.isna(lon):
-#         print("SKIP (bad parse):", lat, lon)
-#         continue
-
-#     # skip bad rows
-#     if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
-#         print("SKIP (not numeric):", lat, lon)
-#         continue
-
-#     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-#         print("SKIP (invalid range):", lat, lon)
-#         continue
-
-#     print("VALID:", lat, lon)
-       
-#     locations = paginate(
-#         "/locations",
-#         params={"coordinates": f"{lat},{lon}", "radius": 1000},
-#         limit=10,
-#         max_pages=1
-#     )
-
-#     if not locations:
-#         continue
-
-#     loc = locations[0]
-#     loc_id = loc["id"]
-#     loc_name = loc["name"]
-
-#     print(f"Found: {loc_id} - {loc_name}")
-
-#     # 🔥 Step 2: get latest reading
-#     latest = get_json(f"/locations/{loc_id}/latest")
-
-#     for r in latest.get("results", []):
-#         dt = r.get("datetime", {})
-
-#         all_rows.append({
-#             "lat_input": lat,
-#             "lon_input": lon,
-#             "location_id": loc_id,
-#             "location_name": loc_name,
-#             "sensor_id": r.get("sensor", {}).get("id"),
-#             "parameter": r.get("parameter"),
-#             "value": r.get("value"),
-#             "datetime_utc": dt.get("utc"),
-#         })
-
-#     sleep_time_api()
 import os
 
 def get_all_sensors_locations(csv_path="locations_global.csv"):
@@ -446,3 +361,171 @@ def get_all_sensors_locations(csv_path="locations_global.csv"):
         })
 
     return pd.DataFrame(all_rows)
+
+def get_sensor_readings(lat, lon, radius=1000):
+    """
+    Given latitude and longitude, return nearby sensor readings
+    """
+
+    # Step 1: find nearby locations
+    locations = paginate(
+        "/locations",
+        params={"coordinates": f"{lat},{lon}", "radius": radius},
+        limit=10,
+        max_pages=1
+    )
+
+    if not locations:
+        return []
+
+    results = []
+
+    for loc in locations:
+        loc_id = loc.get("id")
+        loc_name = loc.get("name")
+
+        # Step 2: get latest readings
+        latest = get_json(f"/locations/{loc_id}/latest")
+
+        for r in latest.get("results", []):
+            dt = r.get("datetime", {})
+
+            results.append({
+                "location_id": loc_id,
+                "location_name": loc_name,
+                "sensor_id": r.get("sensor", {}).get("id"),
+                "parameter": r.get("parameter"),
+                "value": r.get("value"),
+                "datetime_utc": dt.get("utc"),
+            })
+
+    return results
+
+def get_sensor_readings(lat, lon, radius=1000):
+
+    # Step 1: find nearby locations
+    locations = paginate(
+        "/locations",
+        params={"coordinates": f"{lat},{lon}", "radius": radius},
+        limit=10,
+        max_pages=1
+    )
+
+    if not locations:
+        return []
+
+    results = []
+
+    for loc in locations:
+        loc_id = loc.get("id")
+        loc_name = loc.get("name")
+
+        # Step 2: get latest readings
+        latest = get_json(f"/locations/{loc_id}/latest")
+
+        for r in latest.get("results", []):
+            dt = r.get("datetime", {})
+
+            results.append({
+                "location_id": loc_id,
+                "location_name": loc_name,
+                "sensor_id": r.get("sensor", {}).get("id"),
+                "parameter": r.get("parameter"),
+                "value": r.get("value"),
+                "datetime_utc": dt.get("utc"),
+            })
+
+    return results
+
+# lat = -33.673752071375
+# lon = -70.953064737434
+
+# data = get_sensor_readings(lat, lon)
+
+# print("RESULT COUNT:", len(data))
+# print("SAMPLE:", data[:3])
+
+import csv
+import os
+def get_sensor_readings_7days_api(lat, lon, radius=1000):
+    from datetime import datetime, timedelta
+
+    results = []
+
+    # STEP 1: find nearby locations
+    locations = paginate(
+        "/locations",
+        params={"coordinates": f"{lat},{lon}", "radius": radius},
+        limit=5,
+        max_pages=1
+    )
+
+    if not locations:
+        return []
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    seven_days_ago = now - timedelta(days=7)
+
+    date_from = seven_days_ago.strftime("%Y-%m-%dT%H:%M:%SZ")
+    date_to = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # STEP 2: loop locations → sensors → measurements
+    for loc in locations:
+        loc_id = loc.get("id")
+        loc_name = loc.get("name")
+
+        sensors = paginate(
+            f"/locations/{loc_id}/sensors",
+            params={},
+            limit=10,
+            max_pages=1
+        )
+
+        for s in sensors:
+            sensor_id = s.get("id")
+
+            if not sensor_id:
+                continue
+
+            measurements = paginate(
+                f"/sensors/{sensor_id}/measurements",
+                params={
+                    "date_from": date_from,
+                    "date_to": date_to
+                },
+                limit=500,
+                max_pages=2
+            )
+
+            for m in measurements:
+                param = m.get("parameter", {}).get("name", "").lower()
+
+                # filter only pm25 / pm10
+                if param not in {"pm25", "pm2.5", "pm10"}:
+                    continue
+
+                results.append({
+                    "location_id": loc_id,
+                    "location_name": loc_name,
+                    "sensor_id": sensor_id,
+                    "parameter": param,
+                    "value": m.get("value"),
+                    "datetime": m.get("datetime", {}).get("utc"),
+                    "lat": lat,
+                    "lon": lon
+                })
+
+    return results
+
+lat = -33.673752071375
+lon = -70.953064737434
+
+data = get_sensor_readings_7days_api(lat, lon)
+
+print("FINAL RESULT COUNT:")
+
+if data:
+    print("SAMPLE:")
+    for row in data[:5]:
+        print(row)

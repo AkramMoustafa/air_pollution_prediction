@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.services.data_processer import get_all_sensors_locations
+from src.services.data_processer import get_all_sensors_locations, get_sensor_readings_7days_api
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -29,3 +29,19 @@ def get_locations():
         "count": len(cached_df),
         "data": cached_df.to_dict(orient="records")
     }
+
+@app.get("/sensor-data")
+def get_sensor_data(lat: float, lon: float):
+    try:
+        data = get_sensor_readings_7days_api(lat, lon)
+
+        return {
+            "lat": lat,
+            "lon": lon,
+            "count": len(data),
+            "data": data
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+    
