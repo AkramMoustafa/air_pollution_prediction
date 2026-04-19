@@ -17,21 +17,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def load_data():
-    global cached_df
-    cached_df = get_all_sensors_locations()
+cached_df = None
 
 @app.get("/locations")
 def get_locations():
+    global cached_df
+
     if cached_df is None:
-        return {"error": "Data not loaded"}
+        cached_df = get_all_sensors_locations()
 
     return {
         "count": len(cached_df),
         "data": cached_df.to_dict(orient="records")
     }
-
 @app.get("/sensor-data")
 def get_sensor_data(lat: float, lon: float):
     try:
