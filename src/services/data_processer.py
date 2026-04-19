@@ -517,15 +517,3 @@ def get_sensor_readings_7days_api(lat, lon, radius=1000):
                 })
 
     return results
-
-lat = -33.673752071375
-lon = -70.953064737434
-
-data = get_sensor_readings_7days_api(lat, lon)
-
-print("FINAL RESULT COUNT:")
-
-if data:
-    print("SAMPLE:")
-    for row in data[:5]:
-        print(row)
