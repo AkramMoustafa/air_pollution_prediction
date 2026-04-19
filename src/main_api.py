@@ -6,10 +6,12 @@ app = FastAPI()
 
 cached_df = None
 
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # your frontend
+    allow_origins=[
+        "http://localhost:5173",  # local dev
+        "https://air-pollution-prediction-three.vercel.app"  # production frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
