@@ -22,9 +22,8 @@ HTTP_ERROR_COUNT = 0
 CACHE_HITS = 0
 
 LAT, LON = 34.1808, -118.3490
-RADIUS_M = 3_500
-
-CORE_PARAMS = {"pm25", "pm2.5", "pm10"}
+RADIUS_M = 10000  
+CORE_PARAMS = {"pm25", "pm2.5"}
 INCLUDE_ALL_PARAMS = False
 
 DAYS = 365 * 3
@@ -54,7 +53,7 @@ CACHE_ENABLED = True
 SPIKE_THRESHOLD_MAD = 6.0
 MAX_GAP_HOURS = 48
 
-RADIUS_M = 1000
+RADIUS_M = 10000
 
 # RUN_TAG = f"openaq_global_r{RADIUS_M}_{timestamp}"
 # OUT_DIR = RUN_TAG
@@ -371,9 +370,10 @@ def get_sensor_readings(lat, lon, radius=1000):
     locations = paginate(
         "/locations",
         params={"coordinates": f"{lat},{lon}", "radius": radius},
-        limit=10,
-        max_pages=1
+        limit=100,
+        max_pages=10
     )
+
 
     if not locations:
         return []
@@ -437,14 +437,6 @@ def get_sensor_readings(lat, lon, radius=1000):
 
     return results
 
-# lat = -33.673752071375
-# lon = -70.953064737434
-
-# data = get_sensor_readings(lat, lon)
-
-# print("RESULT COUNT:", len(data))
-# print("SAMPLE:", data[:3])
-
 import csv
 import os
 def get_sensor_readings_7days_api(lat, lon, radius=1000):
@@ -505,13 +497,15 @@ def get_sensor_readings_7days_api(lat, lon, radius=1000):
                 if param not in {"pm25", "pm2.5", "pm10"}:
                     continue
 
+                dt_val = m.get("period", {}).get("datetimeFrom", {}).get("utc")
+
                 results.append({
                     "location_id": loc_id,
                     "location_name": loc_name,
                     "sensor_id": sensor_id,
                     "parameter": param,
                     "value": m.get("value"),
-                    "datetime": m.get("datetime", {}).get("utc"),
+                    "datetime": dt_val,  # ✅ FIXED
                     "lat": lat,
                     "lon": lon
                 })

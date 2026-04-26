@@ -10,13 +10,33 @@ body,
 * {
   box-sizing: border-box;
 }
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
 
+.mapboxgl-ctrl {
+  display: none !important;
+}
+.mapboxgl-map {
+  position: absolute !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+}
+
+.mapboxgl-canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
 body {
   overflow: hidden;
   font-family: Inter, system-ui, sans-serif;
   background: #f4f4f5;
 }
-
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right {
+  bottom: 8px !important;
+}
 .leaflet-container {
   width: 100%;
   height: 100%;
@@ -26,7 +46,11 @@ body {
   width: 100%;
   height: 100vh;
 }
-
+.mapboxgl-map,
+.mapboxgl-canvas {
+  height: 100% !important;
+  max-height: 100% !important;
+}
 .map {
   flex: 1;
 }

@@ -4,13 +4,16 @@ import { useRef, useEffect, useState } from "react";
 import Map, { Source, Layer } from "react-map-gl/mapbox";
 import type { MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { getLocations, getSensorData } from "./api/client";
+import AQIHeader from "./components/AQIHeader";
+import AQIStaticBox from "./components/AQIInsightCard"
+import { getLocations, getSensorData, getPrediction } from "./api/client";
 
 export default function PremiumMap() {
   const [geoData, setGeoData] = useState<any>(null);
   const [selectedPoint, setSelectedPoint] = useState<any>(null);
   const mapRef = useRef<MapRef>(null);
   const [loading, setLoading] = useState(false);
+  const [prediction, setPrediction] = useState<any>(null);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -42,44 +45,15 @@ export default function PremiumMap() {
 
   return (
     
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
+   <div style={{ width: "100%",height: "100dvh", position: "relative", overflow: "hidden" }}>
       
-      {/* RIGHT PANEL */}
-      <div
-        style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          width: "300px",
-          height: "100%",
-          background: "#111827",
-          color: "white",
-          padding: "20px",
-          zIndex: 10,
-        }}
-      >
-        <h2>Location Info</h2>
-    {loading && <p>Loading sensor data...</p>}
-        {!selectedPoint && <p>Click anywhere on the map</p>}
-        {selectedPoint && (
-          <>
-            <p><strong>Latitude:</strong> {selectedPoint.lat}</p>
-            <p><strong>Longitude:</strong> {selectedPoint.lng}</p>
-            <p><strong>Data Points:</strong> {selectedPoint.count}</p>
 
-            {/* show sample sensor data */}
-            {selectedPoint.data?.slice(0, 5).map((d: any, i: number) => (
-              <div key={i} style={{ marginBottom: "10px" }}>
-                <p><strong>{d.parameter}</strong>: {d.value}</p>
-                <p style={{ fontSize: "12px", color: "#9ca3af" }}>
-                  {d.datetime}
-                </p>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
+      <AQIHeader />
+    <AQIStaticBox
+      selectedPoint={selectedPoint}
+      prediction={prediction}
+      loading={loading}
+    />
       {/* MAP */}
       <Map
         ref={mapRef}
@@ -87,7 +61,7 @@ export default function PremiumMap() {
         initialViewState={{ latitude: 20, longitude: 0, zoom: 2 }}
         style={{ width: "100%", height: "100%" }}
         mapStyle="mapbox://styles/mapbox/navigation-night-v1"
-        interactiveLayerIds={["points"]} // 🔥 THIS FIXES IT
+        interactiveLayerIds={["points"]} 
        onClick={async (e) => {
           let lng: number, lat: number;
 
@@ -108,21 +82,29 @@ export default function PremiumMap() {
           });
 
           setLoading(true);
+                
+          setPrediction(null);  // <-- add this
 
           try {
-            const res = await getSensorData(lat, lng);
+        const [sensorRes, predictionRes] = await Promise.all([
+          getSensorData(lat, lng),
+          getPrediction(lat, lng),
+        ]);
 
-            setSelectedPoint({
-              lat,
-              lng,
-              count: res.count,
-              data: res.data,
-            });
+        setSelectedPoint({
+          lat,
+          lng,
+          pm25: sensorRes.pm25,
+         timestamp: sensorRes.datetime,
+        });
+
+        setPrediction(predictionRes);
 
           } catch (err) {
             console.error("❌ Fetch error:", err);
           } finally {
             setLoading(false);
+            
           }
         }}
       >
