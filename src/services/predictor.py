@@ -68,7 +68,8 @@ def build_features(data):
 
     # --- CLEAN ---
     df["datetime"] = pd.to_datetime(df["datetime"], utc=True, errors="coerce")
-    df["datetime"] = df["datetime"].dt.floor("h")   # 🔥 REQUIRED
+    df = df.set_index("datetime")
+    df = df.resample("1H").mean()
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
 
     df = df[df["parameter"].isin(["pm25", "pm2.5"])]
