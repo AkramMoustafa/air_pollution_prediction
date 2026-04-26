@@ -204,9 +204,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_PATH = os.path.join(BASE_DIR, "..", "lgb_model.pkl")
 MODEL_PATH = os.path.abspath(MODEL_PATH)
-
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
+print("🔥 NEW VERSION OF PREDICTOR LOADED")
+# with open(MODEL_PATH, "rb") as f:
+#     model = pickle.load(f)
 
 
 FEATURES = [
