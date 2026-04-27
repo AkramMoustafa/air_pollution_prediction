@@ -89,7 +89,11 @@ export default function PremiumMap() {
         const [sensorRes, predictionRes] = await Promise.all([
           getSensorData(lat, lng),
           getPrediction(lat, lng),
+          
         ]);
+
+console.log("🟢 SENSOR RESPONSE:", sensorRes);
+console.log("🔵 PREDICTION RESPONSE:", predictionRes);
 
         setSelectedPoint({
           lat,

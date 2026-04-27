@@ -54,6 +54,9 @@ def debug_df(df, name):
     print(df.isna().sum())
 
 def build_features(data):
+    import pandas as pd
+    import numpy as np
+
     df = pd.DataFrame(data)
 
     if df.empty:
@@ -63,53 +66,60 @@ def build_features(data):
     pd.set_option("display.max_columns", None)
     pd.set_option("display.width", None)
 
+    # --- DATETIME ---
+    df["datetime"] = pd.to_datetime(df["datetime"], utc=True, errors="coerce")
+    print("🟡 AFTER datetime parse:", df.shape)
 
-    # debug_df(df, "RAW DATA")
+    # ✅ FILTER FIRST (before resample)
+    df["parameter"] = df["parameter"].astype(str).str.lower()
+    df = df[df["parameter"].isin(["pm25", "pm2.5"])]
+    print("🟡 AFTER parameter filter:", df.shape)
 
     # --- CLEAN ---
-    df["datetime"] = pd.to_datetime(df["datetime"], utc=True, errors="coerce")
-    df = df.set_index("datetime")
-    df = df.resample("1H").mean()
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
-
-    df = df[df["parameter"].isin(["pm25", "pm2.5"])]
     df = df.dropna(subset=["datetime", "value"])
 
     if df.empty:
+        print("❌ No valid PM data after cleaning")
         return None
 
-    # debug_df(df, "AFTER CLEAN")
-
+    # --- SENSOR COUNT (BEFORE resample)
     sensor_counts = (
         df.groupby("datetime")["sensor_id"]
         .nunique()
         .reset_index(name="sensor_count")
     )
 
-    # --- AGGREGATE ---
-    df = (
-        df.groupby("datetime")["value"]
-        .mean()
-        .reset_index()
-    )
-    
+    # --- SET INDEX ---
+    df = df.set_index("datetime")
+
+    # ✅ KEEP ONLY NUMERIC COLUMNS
+    df = df[["value", "sensor_id"]]
+
+    # ✅ RESAMPLE
+    df = df.resample("1h").mean()
+    print("🟡 AFTER resample:", df.shape)
+
+    if df.empty:
+        print("❌ Data empty after resample")
+        return None
+
+    # --- RESET INDEX ---
+    df = df.reset_index()
 
     # --- MERGE SENSOR COUNT ---
     df = df.merge(sensor_counts, on="datetime", how="left")
 
     df = df.sort_values("datetime")
 
-    df = df.set_index("datetime")              # 🔥 FIX
-    df["value"] = df["value"].interpolate(method="time")
-    df = df.reset_index()                      
     # --- INTERPOLATE ---
+    df = df.set_index("datetime")
+    df["value"] = df["value"].interpolate(method="time")
+    df = df.reset_index()
 
-
-    # debug_df(df, "AFTER INTERPOLATION")
-
-
-    lat = data[0]["lat"]
-    lon = data[0]["lon"]
+    # --- LOCATION ---
+    lat = data[0].get("lat")
+    lon = data[0].get("lon")
 
     start_date = df["datetime"].min().strftime("%Y-%m-%d")
     end_date = df["datetime"].max().strftime("%Y-%m-%d")
@@ -205,8 +215,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "..", "lgb_model.pkl")
 MODEL_PATH = os.path.abspath(MODEL_PATH)
 print("🔥 NEW VERSION OF PREDICTOR LOADED")
-# with open(MODEL_PATH, "rb") as f:
-#     model = pickle.load(f)
+with open(MODEL_PATH, "rb") as f:
+    model = pickle.load(f)
 
 
 FEATURES = [
@@ -306,5 +316,3 @@ def predict_multi_hour(lat, lon, steps=[1, 3, 6, 12]):
         current_df["roll_mean_6h"] = (current_df["roll_mean_6h"] * 5 + y_pred) / 6
 
     return preds
-
-
