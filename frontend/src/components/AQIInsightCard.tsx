@@ -4,11 +4,66 @@ type AQIStaticBoxProps = {
   prediction: any;
   loading: boolean;
 };
+const baseCardStyle = {
+  position: "absolute",
+  bottom: 20,
+  left: 20,
+  width: 320,
+  zIndex: 9999,
+  background: "linear-gradient(180deg, #021B1E 0%, #031F23 100%)",
+  borderRadius: "18px",
+  p: 2,
+  color: "#fff",
+  boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+  fontFamily: "Inter, sans-serif",
+};
+
 export default function AQIStaticBox({
   selectedPoint,
   prediction,
   loading,
+
 }: AQIStaticBoxProps) {
+  // 🔵 LOADING
+if (loading) {
+  return (
+    <Box sx={baseCardStyle}>
+      <Typography sx={{ fontSize: 11, opacity: 0.6 }}>
+        AIR QUALITY INDEX
+      </Typography>
+      <Typography sx={{ mt: 2 }}>
+        ⏳ Analyzing air quality...
+      </Typography>
+    </Box>
+  );
+}
+
+// 🔴 ERROR
+if (prediction?.status === "error") {
+  return (
+    <Box sx={baseCardStyle}>
+      <Typography sx={{ fontSize: 11, opacity: 0.6 }}>
+        AIR QUALITY INDEX
+      </Typography>
+      <Typography sx={{ mt: 2, color: "#f87171" }}>
+        ⚠️ {prediction.message === "Not enough data to make prediction"
+          ? "No sensor data available at this location"
+          : prediction.message}
+      </Typography>
+    </Box>
+  );
+}
+const hasPrediction = prediction?.status === "success";
+
+const trendValues = hasPrediction
+  ? [
+      selectedPoint?.pm25 ?? 0,
+      prediction.pm25_1h ?? 0,
+      prediction.pm25_3h ?? 0,
+      prediction.pm25_6h ?? 0,
+      prediction.pm25_12h ?? 0,
+    ]
+  : [selectedPoint?.pm25 ?? 0];
 const forecast = [
   { label: "1 HOUR", value: prediction?.pm25_1h ?? null },
   { label: "3 HOURS", value: prediction?.pm25_3h ?? null },
@@ -28,17 +83,13 @@ const getAQIStatus = (value: number | null) => {
   return { label: "Very Unhealthy", color: "#7c3aed" };
 };
 const trendUp =
+  hasPrediction &&
   prediction?.pm25_1h != null &&
   selectedPoint?.pm25 != null &&
   prediction.pm25_1h > selectedPoint.pm25;
+  
 const current = getAQIStatus(selectedPoint?.pm25 ?? null);
-const trendValues = [
-  selectedPoint?.pm25 ?? 0,
-  prediction?.pm25_1h ?? 0,
-  prediction?.pm25_3h ?? 0,
-  prediction?.pm25_6h ?? 0,
-  prediction?.pm25_12h ?? 0,
-];
+
 const maxVal = Math.max(...trendValues);
 const minVal = Math.min(...trendValues);
 

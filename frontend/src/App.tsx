@@ -83,7 +83,8 @@ export default function PremiumMap() {
 
           setLoading(true);
                 
-          setPrediction(null);  // <-- add this
+          setPrediction(null);
+          setSelectedPoint(null);  // <-- add this
 
           try {
         const [sensorRes, predictionRes] = await Promise.all([
